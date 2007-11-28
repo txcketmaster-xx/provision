@@ -1,0 +1,85 @@
+GETTING STARTED
+
+This doc aims to get you up-and-running with provision quickly. Provision, out
+of the box, may not do everything you want it to. It aims to be very
+configurable, however, there are still some assumptions about your
+environment.
+
+0. OVERVIEW
+
+   There are two "halves" of provision:
+     1. The piece you run from "wherever"
+     2. The piece that executes on some other system, remotely
+
+   In order for this to work, you must have ssh keys loaded in an ssh-agent
+   when you run provision.
+
+   So when you provision host "foo", if you have the "dns" plugin enabled,
+   it'll figure out where your DNS server is, and then go to it to do the work
+   it needs to do. If you have the filer plugin, it'll figure out what the
+   admin host for your filer is, and go there to do it's work. Etc.
+
+   This means that provision must be installed on all the possible
+   destinations, as well as wherever you want to run it.
+
+
+1. THE CONFIGURATION FILE
+
+   An example configuration file is distributed with the source on
+   docs/provision.conf.dist. It has all possible configuration options
+   with extensive documentation on how to use them.
+
+   The configuration file is YAML-formatted. If you don't know YAML, don't
+   worry, it's easy to figure out. It's just a textual-representation of
+   hashes and arrays. As long as you keep the indentation consistent, it'll
+   parse right.
+
+   Note that the configuration is read only on the host you run provision on.
+   A config file on a destination host is never used... so you don't need to
+   keep your config files in sync.
+
+
+2. RUNNING PROVISION
+
+   Provision needs two things before it'll run:
+     1. Network-access to any possible destinations (DNS master, filer admin
+        host, etc.)
+     2. SSH keys loaded in your ssh-agent that allows access to those systems.
+
+   Running provision is simple, you simply give it a list of hosts to
+   provision on the command line. HOWEVER, you'll want to start with the
+   --dryrun flag to see what it's going to do, and if it's going to work.
+   If it doesn't do what you want, there are a plethora of ways to modify it.
+   Also note that there are many command-line options to enable extra plugins,
+   extra output, and more.
+
+
+3. BENDING PROVISION TO YOUR WILL
+
+   Provision can be fairly easily extended in a variety of ways:
+
+    1. The config file allows many fields to be templatized for extra
+       flexibility.
+
+    2. You can write a "local_decision plugin" to help provision make more
+       complex decisions about your environment. Local_decision plugins are
+       a set of callbacks that provision does to get information like "where
+       do I SSH to?" "What does the export line look like?" "what format do
+       forward zone entries use?" etc. At current count there are 21 possible
+       callbacks. Writing such a plugin is as easy as writing a few perl
+       subroutines. See the API document (in the docs directory), and the
+       template plugin (in the local_decision) directory.
+
+    3. You can write a plugin to provision some new thing. Provision comes
+       stock with a DNS, Filer, and VMWare plugin. Writing a new one is 
+       as easy or hard as writing code to provision whatever resource you
+       need provisioned. The API is very simple, see the API document in the
+       docs directory.
+
+4. CAVEATS, ASSUMPTIONS, PROBLEMS, ETC.
+
+   Provision was originally written around site-specific things, and then
+   re-written to be more pluggable and generic. However, there are still a few
+   assumptions the core of provision makes that should be cleaned up. See the
+   README section, "5. THE STATE OF PROVISION" for a list of these.
+

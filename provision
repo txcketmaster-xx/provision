@@ -1,0 +1,497 @@
+#!/usr/bin/perl
+
+# -*- mode: perl; -*-
+# vim:textwidth=78:
+
+# $Id: provision,v 1.45 2007/09/14 19:00:31 phil Exp $
+
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# (C) Copyright Ticketmaster, Inc. 2007
+#
+
+#
+# Provisioning tool
+#
+
+use strict;
+use warnings;
+use Getopt::Long qw(:config bundling);
+use File::Basename;
+use Carp;
+use lib '/usr/lib';
+use provision::config;
+use provision::data;
+use provision::util qw(:default :provision);
+use Data::Dumper;
+
+our $VERSION = '3.6.0';
+
+#
+# A note on the locking variables - we try twice to get a lock
+# as the master process... a person can re-run it if a lock fails
+# However, our plugins always try at least 5 times - we don't want
+# to half-provision things if we can help it.
+#
+use constant LOCK_FILE => '/tmp/provision_core.lock';
+use constant LOCK_ATTEMPTS => 2;
+use constant LOCK_WAIT => 5;
+
+use constant DEFAULT_CONFIG => '/etc/provision.conf';
+use constant DEFAULT_LIBEXEC => '/usr/libexec';
+
+# Forward Declarations
+sub help ($);
+sub print_core_help();
+
+#
+# Before we do anything, we must register our plugins.
+# This is well before most applications register plugins, but we need to
+# know what options our plugins want us to look for on the command line.
+#
+
+my $core_options = ['add|a=s@','config|c=s','debug|d','dryrun|dry-run|n',
+	'help|h','info|i','libexec|l','list-plugins|L','message|m=s',
+	'override|o=s','printdata|p','quiet|q','remove|r','skip|s=s@',
+	'user|u=s','version|V','verbose|v','warn|w'];
+
+#
+# Generate a list of longoptions to ensure uniqueness
+#
+my $optionlist = {};
+foreach my $coreopt (@{$core_options}) {
+	my ($option,undef) = split(/[|=]/,$coreopt);
+	$optionlist->{$option} = undef;
+}
+
+my $plugins = register_plugins($optionlist);
+
+undef $optionlist;
+
+if (!defined($plugins)) {
+	print STDERR "ERROR: Problems loading plugins\n";
+	exit 1;
+}
+
+my $registered_options = [];
+push(@{$registered_options},@{$core_options});
+foreach my $plugin (keys(%{$plugins})) {
+	foreach my $option (keys(%{$plugins->{$plugin}->{'opts'}})) {
+		if (exists($plugins->{$plugin}->{'opts'}->{$option}->{
+			'getopts'})) {
+			$option .= $plugins->{$plugin}->{'opts'}->{$option}->{
+                        	'getopts'};
+		} else {
+			debug("Plugin $plugin isn't setting getopts"
+                              . ' this is generally harmless but against'
+                              . ' the API and may be a typo');
+		}
+		push(@{$registered_options},$option);
+	}
+}
+
+
+# Get our options
+my $opts = {};
+GetOptions($opts,@{$registered_options})
+	|| die('Invalid options, please try again');
+
+#
+# Do things with those options
+#
+# Note that in a small handful of cases, we use environment variables
+# when we want all modules we call to have access to this stuff. For example
+# *everything* needs access to "is debug on" and "are we in dryrun mode"
+# so passing it around is just stupid.
+#
+help($plugins) if (exists($opts->{'help'}));
+version() if (exists($opts->{'version'}));
+
+list_plugins($plugins) if (exists($opts->{'list-plugins'}));
+
+#
+# Why bother doing any work until we have our lock?
+#
+my $lock_fh = get_lock(LOCK_FILE,LOCK_ATTEMPTS,LOCK_WAIT);
+if (!$lock_fh) {
+	print STDERR 'ERROR: Couldn\'t acquire exclusive lock after'
+		. LOCK_ATTEMPTS . " attempts\n";
+	exit 1;
+}
+
+
+#
+# Once we have a lock, pull in our config
+#
+my $config_file = (defined($opts->{'config'})) ? $opts->{'config'}
+	: DEFAULT_CONFIG;
+unless (-r $config_file) {
+	print STDERR "ERROR: $config_file doesn't exist\n";
+}
+my $config = new provision::config($config_file,$opts,$plugins);
+
+if (defined($opts->{'printdata'})) {
+	print Dumper($config);
+	exit 0;
+}
+
+#
+# We make the debug-type settings environment variables so all plugins
+# have easy access to them without us passing it to the debug(), mywarn()
+# etc function each time.
+#
+$ENV{'ENABLE_DEBUG'} = $config->{'debug'};
+$ENV{'ENABLE_DRYRUN'} = $config->{'dryrun'};
+$ENV{'ENABLE_VERBOSE'} = $config->{'verbose'};
+$ENV{'SURPRESS_WARNINGS'} = $config->{'nowarn'};
+$ENV{'SURPRESS_INFO'} = $config->{'noinfo'};
+
+#
+# Build our list of plugins to run, first in a hash for uniquness
+#
+my $plugins_to_do = {};
+foreach my $todo (@{$config->{'default_plugins'}}) {
+	$plugins_to_do->{$todo} = undef;
+}
+foreach my $todo (@{$opts->{'add'}}) {
+	$plugins_to_do->{$todo} = undef;
+}
+
+
+#
+# Now we have a list of what to do, see if we should omit anything
+#
+foreach (@{$opts->{'skip'}}) {
+	if (!exists($plugins_to_do->{$_})) {
+		print STDERR "ERROR: Unknown skip option $_!\n";
+		exit 1;
+	}
+	delete $plugins_to_do->{$_};
+}
+
+#
+# We have the final list, but order is important here. The config file
+# will give us our basic order and we'll add all --add stuff after that
+#
+# So, first we run through all "default_plugins" from the config file,
+# in order, and check to see if it's still in our todo list. If it is,
+# we push it onto our sorted list and delete it from the plugins_to_do hash.
+#
+# When we're done with that, we push whatever's left on plugins_to_do to
+# the end of the sorted array.
+#
+my @sorted_plugins_to_do;
+foreach my $plug (@{$config->{'default_plugins'}}) {
+	if (exists($plugins_to_do->{$plug})) {
+		push(@sorted_plugins_to_do,$plug);
+		delete $plugins_to_do->{$plug};
+	}
+}
+push(@sorted_plugins_to_do,keys(%{$plugins_to_do}));
+undef $plugins_to_do;
+
+if (scalar(@sorted_plugins_to_do) < 1) {
+	die('No plugins to run!');
+}
+
+
+#
+# Gather up hosts - they can come from stdin, or ARGV
+#
+my @hosts;
+while (scalar(@ARGV) > 0) {
+	push(@hosts,shift);
+}
+
+# If stdin is a tty , we didn't get piped stdin and it
+# wasn't <'d to us either, In other words there's nothing
+# there so don't hang trying to read it
+if (! -t STDIN) {
+        while (<>) {
+                my @stdins = split(/ /,$_);
+                foreach (@stdins) {
+			push(@hosts,$_);
+                }
+        }
+}
+
+my $string = join(' ',@hosts);
+if ($string =~ /~/ && ! $config->{'dryrun'}) {
+	print 'WARNING: You are REMOVING at least 1 host! This functionality'
+			. " is EXPERIMENTAL.\nYou should run a DRYRUN first,"
+			. " if you haven't already!\nAre you sure? (y/n) ";
+	my $ans = <STDIN>;
+	if ($ans !~ /(y|Y|yes|Yes|YES)/) {
+		print "Bailing out at user request\n";
+		exit(0);
+	}
+}
+undef $string;
+
+help($plugins) if (scalar(@hosts) <= 0);
+
+#
+# Sort the host by some grouping that have similar destinations
+#
+# This is ugly... we don't know enough yet to accurately know what LD
+# to use, but we need an LD to group these hosts in a sane manner.
+#
+# So we'll do our best by picking a host, and hope it works.
+#
+
+my $tmpdata = new provision::data;
+$tmpdata->add_host($hosts[0],$config);
+my $name = clean_host($hosts[0]);
+my $ld = find_ld($tmpdata->{$name});
+croak("couldn't find LD") unless(defined($ld));
+my $sorted_hosts = $ld->sort_hostlist_by_dst(@hosts);
+undef($ld);
+undef($tmpdata);
+
+#
+# Here we finally do something
+#
+my %errors;
+my ($good_ld_mods,$bad_ld_mods) = ({},{});
+foreach my $plugin (@sorted_plugins_to_do) {
+	debug("Executing plugin $plugin");
+
+	#
+	# For each plugin, we need an object of that type
+	# so we can ask it to do it's stuff
+	#
+	my $prov = $plugins->{$plugin}->{'ptr'}->new();
+
+	if (!exists($errors{$plugin})) {
+		$errors{$plugin} = 0;
+	}
+
+	foreach my $hostgroup (keys(%{$sorted_hosts})) {
+
+		my $data = new provision::data;
+
+		my ($ld,$ssh_host) = (undef,undef);
+		foreach my $host (@{$sorted_hosts->{$hostgroup}}) {
+
+			my $hname;
+			($hname, $ld) = $data->add_host($host, $config,
+						$bad_ld_mods, $good_ld_mods);
+
+			#
+			# This logic is hard to follow, but here's what
+			# we're doing. We add each host, but we need to use
+			# some example host to find a local_decision plugin
+			# and an ssh_host.
+			#
+			# Rathan than using some random one, we'll try each
+			# as it works. Once we have both defined, we'll stop
+			# trying.
+			#
+			# So why not use a random one? Well, the random one
+			# might be an alias, and the LHS of aliases sometimes
+			# don't follow the naming stanard. They're often a
+			# non-standard alias to standardly named system.
+			#
+			# Of course, they could all be aliases, or otherwise
+			# not give us an ssh_host, but at least we tried.
+			#
+
+			# Do we need to look, or do we have a valid ssh_host?
+			next if (defined($ssh_host));
+
+			# If finding an LD didn't work, neither will finding
+			# an ssh_host
+			next unless (defined($ld));
+
+			#
+			# Get the destination host from the plugin.
+			# We must do this for each group of hosts.
+			#
+			$ssh_host = $prov->get_dst_host($data->{$hname},
+						$config, $ld);
+
+			
+		}
+
+		unless (defined($ld)) {
+			croak('Failed to find a valid local_decision'
+				. ' plugin');
+		}
+
+		# Check
+		unless (defined($ssh_host) && $ssh_host ne '') {
+			mywarn("Plugin $plugin failed to give me the host to"
+                             . ' connect to. Moving on, maybe it doesn\'t'
+			     . ' know something about this host group.');
+			$errors{$plugin}++;
+			next;
+		}
+
+		debug("Plugin $plugin reported destination host as $ssh_host");
+
+		# Override if necessary
+		if ($config->{'fake_host'} ne '') {
+			mywarn("Overridding destination host $ssh_host with "
+                             . $config->{'fake_host'});
+			$ssh_host = $config->{'fake_host'};
+		}
+
+		my $retval = call_helper($plugin, $ssh_host, $config, $data);
+
+		unless ($retval) {
+			$errors{$plugin}++;
+		}
+	}
+}
+		
+my $error_flag = 0;
+foreach my $plugin (keys(%errors)) {
+	if ($errors{$plugin} != 0) {
+		mywarn("There were $errors{$plugin} $plugin allocation errors");
+		$error_flag = 1;
+	}
+}
+	
+if ($error_flag == 1) {
+	print "Provisioning did not complete successfully, please investigate\n";
+	exit 1;
+}
+
+print "Provisioning complete\n";
+exit 0;
+
+
+sub help ($)
+{
+	my ($plugins) = shift;
+
+	print_core_help();
+	print_plugin_help($plugins);
+
+	exit 0;
+}
+
+sub print_core_help ()
+{
+
+	my $prog = basename($0);
+	print <<EOF
+
+$prog $VERSION
+
+Usage: $0 [<options>] <host> [<host> [...]]
+
+   Provision takes a list of hostnames on the command line, STDIN, or both.
+   <host> may be take the following forms:
+
+      <hostname>		- Add <hostname>
+      ~<hostname>		- Remove <hostname>
+      <alias>=<hostname>	- Alias <alias> to <hostname>
+
+   When provisioning a new host, you MUST pass in a fully qualified v3
+   hostname. However, for aliases and removals, non-v3 names are allowed.
+
+   Removal notes:
+     - Removing a host removes all aliases to the host. Such aliases will
+	be printed for you.
+     - Removing a host will remove it's forward, the reverse for the IP
+        it was pointing to, and any other reverse entries that point to that
+        host.
+     - Removing an alias does NOT remove it's destination host.
+     - If the only things left in a qtree are <instance> and 'shared',
+	the qtree will be removed.
+ 
+   Options for provision's core:
+
+     -a, --add <plugin>
+		Add this plugin to the default list of plugins to run. Pass
+		this option multiple times to add multiple plugins:
+		--add foo --add bar
+
+     -c, --config <config_file>
+		YAML config file.
+
+     -d, --debug
+		Turn on debugging output.
+
+     -n, --dryrun
+                Tells provision not to do anything, but instead to tell
+		you what it would do.
+
+     -h, --help
+		This message you are reading now.
+
+     -i, --info
+		Supress normal info. See also -q.
+
+     -l, --libexec <path>
+		Path to provision_helper on the remote systems. Defaults to
+		/usr/libexec .
+
+     -L, --list-plugins
+		List all valid plugins and exit.
+
+     -m, --message <message>
+		Use this message when doing RCS commits.
+
+     -o, --override <fqdn>
+		Give a fake host to connect to for updating DNS
+		and filer files. Host should have the necessary
+		files, as they will be in fact modified.
+		This option will force no commands to be run on
+		a the filers, and no "make" to be run on the DNS
+		box.
+
+     -p, --printdata
+		Dump the config object after it's compiled and exit. This
+		is really only useful for debugging local_decision plugins.
+
+     -q, --quiet
+		Quiet mode. Equivalent to -iw. Supresses both
+		warnings and informational output. Not recommended.
+
+     -s, --skip <plugin>
+		Skip running this plugin. Pass this option multiple times
+		to skip multiple plugins: --skip filer --skip dns
+
+     -u, --user
+		User to SSH as to the DNS/OPS boxes.
+
+     -v, --version
+		Print version and exit.
+
+     -w, --warn
+		Supress warning messages. See -q. Not recommended.
+
+EOF
+;
+
+}
+
+sub version
+{
+	print basename($0) . " $VERSION\n";
+	exit 0;
+}
+
+sub list_plugins
+{
+	my $plugins = shift;
+
+	my $prog = basename($0);
+	print "$prog $VERSION\n\n";
+	print "Valid plugins: " . join(' ', keys(%{$plugins})) . "\n\n";
+
+	exit 0;
+}

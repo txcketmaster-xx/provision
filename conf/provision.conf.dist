@@ -1,0 +1,43 @@
+---
+range:
+  websys:
+    lax0: 192.168.168/23
+    lax1: 192.168.56/23
+    lax2: 192.168.58/23
+    ord0: 192.168.170/23
+    ord1: 192.168.46/23
+    ord2: 192.168.48/23
+    ord3: 192.168.248/23
+    stg1: 192.168.66/23
+    stg2: 192.168.50/23
+    adm2: 192.168.196/22
+  coresys:
+    adm1: 192.168.70/24
+    els0: 10.75.26/24
+    els1: 10.75.24/24
+    ord0: 192.168.92/24
+    ord1: 192.168.90/24
+    ord2: 192.168.88/24
+    stg3: 192.168.125/24
+    stg4: 192.168.127/24
+
+network_overlay:
+  websys:
+    stg3: bej0
+    (dev|qa|phxdev|phxqa)\d: adm2
+  coresys:
+    (dev|qa)[12]: adm1    
+
+zonepath: "/chroot/named/var/named/pz"
+dns_start_search: 10
+dns_end_search: 240
+# This is deprecated
+#devqa_re: (dev|qa|phxdev|phxqa)
+make_server: "/vrt/shared/bin/make_server"
+default_plugins:
+    - dns
+    - filer
+# This is the place for local_decision data
+local_decision:
+  websys:
+  coresys:

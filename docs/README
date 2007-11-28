@@ -1,0 +1,98 @@
+Provision
+
+1. WHAT IS PROVISION
+
+Provision is a plugable and configurable system for provision all of the
+things needed to set a system up. This is stuff like IP address, NFS mounts,
+and even virtual machines.
+
+It is designed to be fairly configurable via just a configuration file.
+However, since many shops aren't as consistent and homogeneous as we'd all
+like, writing a module to assist provision in making the appropriate decision
+for your environment is made as simple as possible.
+
+Provision uses YAML-over-SSH as it's simplified version of RPC.
+
+Provision was written as a compliment to Ticketmaster's configuration
+management framework, rubix. Rubix is designed to configure a running system,
+usually during a maintence window. However, allocating an IP, setting up DNS,
+and filer qtrees was still a somewhat manual task. This is the work provision
+aims to automate.
+
+2. WHAT PROVISION IS NOT
+
+Provision has a limited scope. It doesn't attempt to do anything for
+provisioning a system once that system is up. Provision's job is done when a
+system is ready to be kickstarted, or in the case of a virtual machine, when
+the machine is kickstarting.
+
+3. WHY PROVISION
+
+Every shop always has their own home-grown scripts for this sort of thing.
+They're rarely pluggable. Provision provides a dynamic and configurable system
+for provisioning all of your pre-reqs. With a flexible call-back-like
+mechanism, provision should work in even the most inconsistent environment
+with only minimal code on the sysadmin's part. In a reasonably consistent
+environment, only changing the config file should be required.
+
+4. A NOTE ON PROVISION'S BACKGROUND
+
+Provision was originally written as another site-specific system for handling
+Ticketmaster's DNS and Qtree allocation. However, it was re-written to be
+pluggable in late 2006 / early 2007, and in mid-2007, as much decision-making
+logic was pulled out into callbacks and templatized configs as possible.
+
+During the re-write, it was clear there were two entire separate kinds of
+plugins that would be needed. Upon sitting down to modify provision, the goal
+was likely to be one of two possibilities: provision needed to learn how to
+provision something new, or provision needed to better understand some
+environment. As such there are two types of plugins supported. A standard
+plugin (provision::plugin::*) are modules for provisioning something specific.
+Currently there are plugins for VMWare VM's, BIND-based DNS, and Netapp
+Filers. New ones could be added for almost anything: Xen VMs, tinydns DNS,
+internal inventory DB updates, etc.
+
+In addition, there is a "local decision" framework. These are plugins you
+write to help provision make decisions better suited to your environment.
+
+5. THE STATE OF PROVISION
+
+At the point of release, provision still has some assumptions in it that
+probably aren't suitable for lots of shops. This section aims to document the
+good and bad of provision.
+
+   A. What we did right
+      * Every resource provision can allocate is driven by a plugin. This
+        means it's easy to add/remove resources that provision can allocate.
+        It also means that if you find our X plugin inadequate, you can easily
+        write your own and still have the provision framework at your service.
+      * Provision interpolates many of it's configuration options as templates
+        allowing flexibility without requiring the user to write code.
+      * Shrug off all 'variable' decisions onto "local_decision" plugins so
+        that users can drop in any logic they want for complicated or
+        non-standard or legacy systems
+
+   B. Assumptions we make
+      * That you will define a group. The group can be statically defined in
+        the config file, or a way to parse it out of the hostname can be
+        defined, but it must be defined. This shouldn't cause any problems,
+        but it's worth noting.
+
+      * That you can SSH to "destinations" as the user with privelege to
+        change stuff directly, with a key. In other words, if you have to be
+        root to update DNS, then provision assumes it can ssh, as root, to the
+        DNS master, using the keys in your agent.
+
+      * That you're reverse-DNS zonefiles are broken-up-by and named-by /24s.
+        NOTE: This does NOT mean it assumes you *use* /24s - provision
+        supports various network masks. However, it assumes that if you have a
+        /23 of 10.1.2.0 - 10.1.3.255 that there are two zonefiles: 10.1.2 and
+        10.1.3. Further, it assumes that the left-hand-side of PTR entries are
+        the final digit of the IP address.
+
+   C. Changes coming
+      * The DNS-based assumptions above are high on the list of fixes.
+      * A more robust API for plugins (which will probably includ merging
+        'plugins' and 'local_decision' plugins into one structure with hooks
+        that are register-able).
+

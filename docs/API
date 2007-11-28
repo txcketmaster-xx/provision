@@ -1,0 +1,74 @@
+Provivion has 2 APIs. They are very simple to make the barrier-to-entry low.
+
+1. Local_decision API
+
+To create a local_decision plugin, start with the template in
+lib/provision/local_decision/template.pm. Make a copy of this that matches the
+"group" part of your hostname. We'll pretend your group is "web" so you make
+a "web.pm".
+
+Web.pm will already be setup as a subclass of provision::local_decision, which
+means you only need to implement a few functions to start, and more as you
+feel the need.
+
+Start by changing the name of the package from
+"provision::local_decision::template" to "privision::local_decision::web".
+
+Now, look through lib/provision/local_decision.pm. These are all the callbacks
+you have access to change.
+
+Most of the functions in local_decision.pm are implemented with some sane
+defaults. In cases where there's no obvious way to make it generic, a '-1' is
+returned to denote 'NOT SUPPORTED.' You may override ANY function in
+local_decision.pm with your own simply by defining it in web.pm.
+
+If a function is required to be implemented for some plugin or another, but a
+generic way of doing it wasn't obvious a best-effort was implimented in
+lib/provision/generic.pm. At the time of writing, that's simply get_vol() and
+get_fls(). These are required for the filer plugin (unless you choose to
+specify these on the command-line).
+
+NOTE WELL: If you're writing your own plugin, provision will always fail back
+to the 'generic' plugin if loading the 'group' plugin fails for any reason.
+However, since using the generic plugin is likely to be common, we don't throw
+an error. To find out which plugin is being used, you'll want to run provision
+in debug mode.
+
+2. Plugins
+
+Provisioning Plugins must implement three functions:
+   run() - we call this to tell the plugin to provision something
+   local_opts() - returns a hash of command-line options desired. ONLY LONG
+                  OPTS ARE SUPPORTED.
+   get_dst() - Where to head to, to provision whatever your plugin will
+               provision. This is usually a wrapper around some local_decision
+	       functions. Feel free to add local_decision functions as needed.
+
+RUN
+run() is passed a config object and a host object. The action to be taken is
+specified in the host-object (provision, deprovision, or alias), and we expect
+a positive integer as success, and a 0 on failure. Just print errors for the
+users, provision will handle picking them ip.
+
+LOCAL_OPTS
+This returns a hash that looks like this:
+     {'someoption' =>
+               {
+                'getopts' => '=s',
+                'args' => 'somearg',
+                'help' => 'The someoption does some thing'
+               } 
+     }
+
+You can request as many command-line options as you'd like. They'll show up
+in a help. args is a description of args for the help, and getopts is the bits
+to be tack'd on to tell getops what arguments, if any, are required. Finally,
+provision will check for collisions and report them.  ONLY LONG OPTS ARE
+SUPPORTED!
+
+GET_DST
+As mentioned above, this likely wraps some local_decision functions, and puts
+together a hostname to ssh to to provision whatever your plugin provisions for
+the host passed in.
+
+

@@ -1,0 +1,167 @@
+---
+#
+# This is hash of CIDR ranges for clusters of systems
+# Separated by group, and then by whatever smaller unit you have.
+#
+# provision will descend this tree along any branch where they key
+# is an exact match for any value of the parsed host data structure.
+#
+range:
+  web:
+    c1: 192.168.0/23
+    c2: 192.168.2/23
+    c3: 192.168.4/23
+    c4:
+      - 192.168.22/24
+      - 192.168.10/23
+  internal:
+    g1: 10.0.0.0/24
+
+#
+# A way to say that certain groups of systems actually inherit the properties
+# of others. For example, you might have several virtual dev and qa clusters
+# that live in the same network space which you call 'devqa'.
+#
+# The top-level hash should be valid "groups" (pulled from the hostname regex),
+# the level below that is *any* part of the host structure you expect to be
+# populated.
+#
+# Finally the last level is the mapping. The keys here are a regex, the values
+# are the map destination.
+#
+# For instance, in the example below, anything in the group "web" which a
+# cluster of 'foo' will also inherit configs for cluster 'bar', and anything
+# with a class of 'apache or thttp will inherit configs for the www.
+#
+# What do we mean by "inherit"? The main thing is that when we descend
+# the "range" structure above, we will consider anything that matches the
+# mapping just as valid as anything that matches any other part of the host
+# structure.
+#
+# We store this data with a key of 'overlay_$field' where $field is
+# the piece of the hostname you're mapping (cluster/class/etc.).
+#
+# Multiple mappings are not supported, it's first-match for each field
+# in the host entry. In other words, you can have a overlay_cluster and
+# an overlay_class, but only one class regex will be used (the first one
+# matched).
+#
+overlay_map:
+  web:
+    cluster:
+      '(dev|qa)\d+': devqa
+      'foo': bar
+    class:
+      'apache|thttp': www
+
+
+#
+# hostname_parse_data is an array of hashes. Each hash has an 're' and
+# 'indexes' entry. The 're' is a regular expression with paryns to capture
+# all the parts you care about (probably everything except separates like
+# dot or dash.
+#
+# The indexes entry in the hash are entries to go into the data structure,
+# and the capture-variables used to make them. The value of this hash is just
+# 'eval'd after the successful regex, so you have a fair amount of flexibility
+# here.
+#
+# When hostnames are parsed, they try each entry in the array until one
+# of the regex matches. When one matches, it populates a hash with the
+# key-value pairs from the indexes hash in the same entry of the array.
+#
+# NOTE WELL: A "group" entry *MUST* be defined. If you don't have multiple
+# groups, then this isn't useful to you, but it's still required. You can
+# simply put "group: mycompany" or whatever. This value is used to test if
+# you have a local_decision plugin, descend the "range" directive above,
+# etc. This is the only required entry.
+#
+
+hostname_parse_data:
+   - re: (\w)(\d+)\.(\w)\.(\w)\.(corp)
+     indexes:
+       class_type: $1
+       class_inst: $2
+       class: "$1 . $2"
+       cluster: $3
+       group: $4
+       tld: $5
+   - re: ...
+     indexes: ...
+
+#
+# Filer path is the path to where you mount volumes on the filer 'admin host'
+# as netapp calls it. This is templatized and by default the local_decision
+# layer will replace '__filer__' with the filer in question and __vol__ with
+# the volume in question.
+#
+filer_path: "/__filer__/__vol__"
+
+#
+# The username to connect to the filer as to do 'qtree create'. Currently
+# not used.
+#
+filer_username: root
+
+#
+# The admin host for the filer a given host's qtree will be on. Templatized.
+# You can use *any* part of the parse hostname data structure as a template
+# value. That includes all indexes from hostname_parse_data as well as any
+# additional fields you populate in your own hostname parsing function.
+#
+# A 'hostname' is automatically populated into this structure, so you can
+# the FQDN for templating as well.
+#
+filer_adm_host: "ops1.sys.__cluster__.__group__.tmcs"
+
+#
+# The naming of qtrees. Again, templated for *any* entry in the parsed
+# hostname structure.
+#
+filer_qtree_name: "__group__-__cluster__-__class_type__"
+
+#
+# Where to find zonefiles
+#
+zonepath: "/chroot/named/var/named/zones"
+
+#
+# DNS master server
+#
+dns_master: "dns1.web.tmcs"
+
+#
+# The range (in each /24 to look at for available addresses)
+#
+dns_start_search: 11
+dns_end_search: 239
+
+#
+# The path to the script to provision a new VM
+#
+new_server: "/home/phil/bin/new_server"
+
+#
+# Path to where the VM director lives for a given system
+#
+vm_path: "/vrt/vm/__hostname__"
+
+#
+# The default plugins to run if no options add/remove plugins on the command
+# line.
+#
+default_plugins:
+    - dns
+    - filer
+
+#
+# Random data you want to pass to your local decision plugins.
+# First level is policy-required to the name of the group (i.e. the name of
+# the local_decision plugin. Anything under that is whatever you want.
+#
+local_decision:
+  web:
+    c1:
+      filer: fls1
+      vol: vol1
+

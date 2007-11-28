@@ -1,0 +1,3 @@
+- Support multiple IPs
+- Remove reverse-zonefile-format assumptions
+- plugin for ssh hostkey pre-allocation

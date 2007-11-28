@@ -1,0 +1,164 @@
+#!/usr/bin/perl
+
+# -*- mode: perl; -*-
+# vim:textwidth=78:
+
+# $Id: provision_helper,v 1.12 2007/09/14 19:00:31 phil Exp $
+
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# (C) Copyright Ticketmaster, Inc. 2007
+#
+
+#
+# Local entry point for all plugins
+#
+
+use strict;
+use warnings;
+use Getopt::Long qw(:config bundling);
+use File::Basename;
+use Carp;
+use lib '/usr/lib';
+use provision::config;
+use provision::util qw(:default :provision);
+use provision::data;
+
+our $VERSION = sprintf("%d.%03d",q$Revision: 1.12 $ =~ /: (\d+)\.(\d+)/);
+
+use constant LOCK_FILE => '/tmp/provision_plugin.lock';
+use constant LOCK_ATTEMPTS => 5;
+use constant LOCK_WAIT => 5;
+
+# Forward Declarations
+sub help ();
+
+# Get our options
+my $opts = {};
+GetOptions($opts,'help|h','plugin|p=s')
+	|| die("Invalid options, please try again");
+
+help() if (exists($opts->{'help'}));
+
+# Do something with our one and only option
+my $plugin = '';
+if (exists($opts->{'plugin'})) {
+	$plugin = $opts->{'plugin'};
+}
+if ($plugin eq '') {
+	print STDERR "WRONG! You must specify a plugin!\n";
+	exit 1;
+}
+
+select(STDOUT);
+$|=1;
+select(STDERR);
+$|=1;
+
+# Pull in our config and data from stdin, and unserialize it
+my @lines;
+while (<STDIN>) {
+	push(@lines,$_);
+}
+my $in_config = join('',@lines);
+my ($config,$data) = YAML::Load($in_config);
+undef $in_config;
+undef @lines;
+
+#
+# Acquire lock
+#
+my $lock_fh = get_lock(LOCK_FILE,LOCK_ATTEMPTS,LOCK_WAIT);
+if (!$lock_fh) {
+	print STDERR "ERROR: Couldn't acquire exclusive lock after"
+		. " @{[ LOCK_ATTEMPTS ]} attempts\n";
+	exit 1;
+}
+
+
+#
+# Do our work
+#
+
+eval "require provision::plugins::$plugin";
+my $prov;
+my $plugin_ptr = "provision::plugins::$plugin";
+$prov = $plugin_ptr->new();
+
+my $errors = 0;
+
+#
+# We make the debug-type settings environment variables so all plugins
+# have easy access to them without us passing it to the debug(), mywarn()
+# etc function each time.
+#
+$ENV{'ENABLE_DEBUG'} = $config->{'debug'};
+$ENV{'ENABLE_DRYRUN'} = $config->{'dryrun'};
+$ENV{'ENABLE_VERBOSE'} = $config->{'verbose'};
+$ENV{'SURPRESS_WARNINGS'} = $config->{'nowarn'};
+$ENV{'SURPRESS_INFO'} = $config->{'noinfo'};
+
+my $bad_ld_mods = {};
+my $good_ld_mods = {};
+foreach my $host (keys(%{$data})) {
+	#
+	# Determine where our callbacks will come from (i.e. which local_decision
+	# plugin to use).
+	#
+	my $ret = find_ld($data->{$host}, $bad_ld_mods, $good_ld_mods);
+	unless (defined($ret)) {
+		croak('Couldn\'t load local decision plugin for '
+			. $data->{$host}->{'group'} . ' or the generic one due to'
+			. ' errors');
+	}
+	$config->{'ld_ptr'} = $ret;
+	my $retval = $prov->run($data->{$host},$config);
+	$errors++ if ($retval != 1);
+}
+
+info("$errors $plugin allocations failed\n") if ($errors != 0);
+
+exit $errors;
+
+
+#
+# Subs
+#
+
+sub help ()
+{
+	my $prog = basename($0);
+
+	print <<EOF
+
+$prog $VERSION
+
+THIS SHOULD NOT BE CALLED MANUALLY! It takes serialzed data over STDIN
+from provision(8).
+
+Usage: $0 [-h] [-p <plugin>]
+
+  Options:
+
+     -h, --help
+		This message you are reading now.
+
+     -p, --plugin <plugin>
+		The plugin to execute.
+
+EOF
+;
+	exit 0;
+}
+
