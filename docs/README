@@ -14,7 +14,7 @@ for your environment is made as simple as possible.
 Provision uses YAML-over-SSH as it's simplified version of RPC.
 
 Provision was written as a compliment to Ticketmaster's configuration
-management framework, rubix. Rubix is designed to configure a running system,
+management framework, spine. Spine is designed to configure a running system,
 usually during a maintence window. However, allocating an IP, setting up DNS,
 and filer qtrees was still a somewhat manual task. This is the work provision
 aims to automate.
