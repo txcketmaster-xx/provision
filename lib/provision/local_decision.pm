@@ -140,6 +140,17 @@ sub check_do_plugin
 	my $self = shift;
 	my ($host, $config, $plugin) = @_;
 
+	if (exists($host->{'skip_plugins'})) {
+		foreach my $pi (@{$host->{'skip_plugins'}}) {
+			if ($pi eq $plugin) {
+				debug("Skipping plugin $plugin because"
+					. ' hostname_parse_data requires us'
+					. ' to.');
+				return 0;
+			}
+		}
+	}
+
 	return 1;
 }
 

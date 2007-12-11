@@ -104,6 +104,10 @@ sub add_host
 		if ($hostname =~ m/^$re$/) {
 			debug('Success with RE!');
 			$indexes = $entry->{'indexes'};
+			if (exists($entry->{'skip_plugins'})) {
+				$host->{'skip_plugins'} =
+					$entry->{'skip_plugins'};
+			}
 			last;
 		}
 	}
