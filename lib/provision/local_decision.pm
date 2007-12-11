@@ -189,7 +189,10 @@ sub get_filer_adm_host
 	my $hostname = $config->{'filer_adm_host'};
 
 	foreach my $key (keys(%{$host})) {
-		$hostname =~ s/__${key}__/$host->{$key}/g;
+		my $replacement = (exists($host->{"overlay_$key"}))
+			? $host->{"overlay_$key"}
+			: $host->{$key};
+		$hostname =~ s/__${key}__/$replacement/g;
 	}
 
 	if ($hostname =~ /__\w+__/) {
