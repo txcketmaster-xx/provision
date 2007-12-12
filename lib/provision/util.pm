@@ -40,7 +40,7 @@ use IO::Handle;
 use IPC::Open2;
 use Data::Dumper;
 
-my $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+my $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 use Exporter;
 use base qw(Exporter);
@@ -49,7 +49,7 @@ our @EXPORT_OK = qw(call_helper checkin checkout commit_diff debug dry_run
                    file_grep get_fh get_lock info print_plugin_help
 		   register_plugins show_diff verbose mywarn find_ld
 		   clean_host);
-our @EXPORT = qw(debug mywarn info verbose);
+our @EXPORT = qw(debug mywarn info verbose interpolate_host_vars);
 our %EXPORT_TAGS = (
                    plugin => [qw(checkin checkout commit_diff show_diff
                                  dry_run file_grep get_fh)],
@@ -583,6 +583,26 @@ sub clean_host
 	$newname =~ s/^[\+\~]//g;
 
 	return $newname;
+}
+
+# Interpolate hostname variables, being aware of overlay values
+sub interpolate_host_vars
+{
+	my ($host, $str) = @_;
+
+	foreach my $key (keys(%{$host})) {
+		next if ($key eq 'skip_plugins');
+		my $replacement = (exists($host->{"overlay_$key"}))
+			? $host->{"overlay_$key"}
+			: $host->{$key};
+		$str =~ s/__${key}__/$replacement/g;
+	}
+
+	if ($str =~ /__\w+__/) {
+		debug("Still templatized stuff laying around: $$str");
+		return undef;
+	}
+	return $str;
 }
 
 

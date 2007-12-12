@@ -35,7 +35,7 @@ use lib '/usr/lib';
 use provision::util qw(:default :plugin);
 use provision::data;
 
-my $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+my $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 sub new
 {

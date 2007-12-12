@@ -35,7 +35,7 @@ use provision::config;
 use provision::util qw(:default :provision);
 use provision::data;
 
-our $VERSION = sprintf("%d.%03d",q$Revision$ =~ /: (\d+)\.(\d+)/);
+our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 use constant LOCK_FILE => '/tmp/provision_plugin.lock';
 use constant LOCK_ATTEMPTS => 5;

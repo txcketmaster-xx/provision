@@ -38,9 +38,8 @@ use warnings;
 use Scalar::Util qw(reftype);
 use lib '/usr/lib';
 use provision::util qw(:default);
-our ($VERSION);
 
-$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 #
 # You should never have to bother with this.
@@ -199,20 +198,7 @@ sub get_filer_adm_host
 
 	my $hostname = $config->{'filer_adm_host'};
 
-	foreach my $key (keys(%{$host})) {
-		my $replacement = (exists($host->{"overlay_$key"}))
-			? $host->{"overlay_$key"}
-			: $host->{$key};
-		$hostname =~ s/__${key}__/$replacement/g;
-	}
-
-	if ($hostname =~ /__\w+__/) {
-		debug("Still templatized stuff laying around: $hostname");
-		# We didn't have enough information
-		return undef;
-	}
-
-	return $hostname;
+	return interpolate_host_vars($host, $hostname);
 }
 
 #
@@ -279,12 +265,7 @@ sub get_qtree_name
 
 	my $name = $config->{'filer_qtree_name'};
 
-	foreach my $key (keys(%{$host})) {
-		next unless (defined($host->{$key}));
-		$name =~ s/\_\_$key\_\_/$host->{$key}/g;
-	}
-
-	return $name;
+	return interpolate_host_vars($host, $name);
 }
 
 #
@@ -416,12 +397,7 @@ sub get_vm_path
 
 	my $name = $config->{'vm_path'};
 
-	foreach my $key (keys(%{$host})) {
-		next unless (defined($host->{$key}));
-		$name =~ s/\_\_$key\_\_/$host->{$key}/g;
-	}
-
-	return $name;
+	return interpolate_host_vars($host, $name);
 }
 
 #

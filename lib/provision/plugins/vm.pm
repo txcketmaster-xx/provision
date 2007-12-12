@@ -31,9 +31,8 @@ use Carp;
 use File::Basename;
 use lib '/usr/lib';
 use provision::util qw(:default :plugin);
-our ($VERSION);
 
-$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 use constant DEFAULT_NEW_SERVER => '/vrt/shared/bin/new_server';
 use constant NOHUP => '/usr/bin/nohup';

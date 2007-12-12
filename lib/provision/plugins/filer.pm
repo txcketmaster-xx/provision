@@ -34,7 +34,7 @@ use provision::data;
 
 our $RSH = '/usr/bin/rsh';
 our $RM = '/bin/rm';
-our $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 use constant DEFAULT_OPS_HOST => 'ops1.sys.adm2.websys.tmcs';
 use constant DEFAULT_QUOTA => '5G';

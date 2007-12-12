@@ -48,7 +48,7 @@ use constant TOP_LEVEL_CONFIG_TREES => qw(range network_overlays zonepath
 				filer_username filer_path hostname_parse_data
 				overlay_map vm_path vmlist_path dns_master);
 
-my $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+my $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 sub new
 {

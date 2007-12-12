@@ -37,7 +37,7 @@ use constant ACTION_ADD => 0;
 use constant ACTION_REMOVE => 1;
 use constant ACTION_ALIAS => 2;
 
-$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
 sub new
 {
