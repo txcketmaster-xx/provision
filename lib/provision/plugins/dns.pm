@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: dns.pm,v 1.26 2007/10/12 02:34:23 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@ use lib '/usr/lib';
 use provision::util qw(:default :plugin);
 use provision::data;
 
-my $VERSION = sprintf('%d.%03d',q$Revision: 1.26 $ =~ /: (\d+)\.(\d+)/);
+my $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 sub new
 {

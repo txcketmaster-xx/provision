@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: local_decision.pm,v 1.9 2007/09/14 19:00:31 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -40,7 +40,7 @@ use lib '/usr/lib';
 use provision::util qw(:default);
 our ($VERSION);
 
-$VERSION = sprintf('%d.%03d',q$Revision: 1.9 $ =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 #
 # You should never have to bother with this.

@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: util.pm,v 1.18 2007/09/14 19:00:31 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -40,7 +40,7 @@ use IO::Handle;
 use IPC::Open2;
 use Data::Dumper;
 
-my $VERSION = sprintf('%d.%03d',q$Revision: 1.18 $ =~ /: (\d+)\.(\d+)/);
+my $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 use Exporter;
 use base qw(Exporter);

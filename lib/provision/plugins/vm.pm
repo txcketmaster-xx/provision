@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: vm.pm,v 1.15 2007/09/14 19:00:32 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -33,7 +33,7 @@ use lib '/usr/lib';
 use provision::util qw(:default :plugin);
 our ($VERSION);
 
-$VERSION = sprintf('%d.%03d',q$Revision: 1.15 $ =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 use constant DEFAULT_NEW_SERVER => '/vrt/shared/bin/new_server';
 use constant NOHUP => '/usr/bin/nohup';

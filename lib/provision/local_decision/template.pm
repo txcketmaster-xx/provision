@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: template.pm,v 1.10 2007/09/14 19:00:32 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -34,7 +34,7 @@ use provision::util qw(:default);
 our ($VERSION);
 
 
-$VERSION = sprintf('%d.%03d',q$Revision: 1.10 $ =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 sub get_filer
 {

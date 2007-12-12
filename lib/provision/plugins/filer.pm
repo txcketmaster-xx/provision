@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: filer.pm,v 1.25 2007/09/14 19:00:32 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -34,7 +34,7 @@ use provision::data;
 
 our $RSH = '/usr/bin/rsh';
 our $RM = '/bin/rm';
-our $VERSION = sprintf('%d.%03d',q$Revision: 1.25 $ =~ /: (\d+)\.(\d+)/);
+our $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 use constant DEFAULT_OPS_HOST => 'ops1.sys.adm2.websys.tmcs';
 use constant DEFAULT_QUOTA => '5G';

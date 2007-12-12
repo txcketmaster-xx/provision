@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: config.pm,v 1.16 2007/09/14 19:00:31 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -48,7 +48,7 @@ use constant TOP_LEVEL_CONFIG_TREES => qw(range network_overlays zonepath
 				filer_username filer_path hostname_parse_data
 				overlay_map vm_path vmlist_path dns_master);
 
-my $VERSION = sprintf('%d.%03d',q$Revision: 1.16 $ =~ /: (\d+)\.(\d+)/);
+my $VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 sub new
 {

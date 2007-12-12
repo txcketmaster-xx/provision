@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: data.pm,v 1.10 2007/09/14 19:00:31 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@ use constant ACTION_ADD => 0;
 use constant ACTION_REMOVE => 1;
 use constant ACTION_ALIAS => 2;
 
-$VERSION = sprintf('%d.%03d',q$Revision: 1.10 $ =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 sub new
 {

@@ -1,7 +1,7 @@
 # -*- mode: perl; -*-
 # vim:textwidth=78:
 
-# $Id: generic.pm,v 1.7 2007/09/14 19:00:32 phil Exp $
+# $Id$
 
 #
 # This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@ use base qw(provision::local_decision);
 use provision::util qw(:default);
 our ($VERSION);
 
-$VERSION = sprintf('%d.%03d',q$Revision: 1.7 $ =~ /: (\d+)\.(\d+)/);
+$VERSION = sprintf('%d.%03d',q$Revision$ =~ /: (\d+)\.(\d+)/);
 
 sub descend_level
 {
