@@ -10,13 +10,14 @@ Name: %{TM_Component}
 Summary: A tool for provisioning new systems
 Packager: Phil Dibowitz, <phil.dibowitz@ticketmaster.com>
 Version: 3.6.0
-Release: 1
+Release: 2
 Source: %{TM_Component}-%{version}-cvs.tar.gz
 Copyright: GPL
 Group: Applications/System
 BuildRoot: %{_tmppath}/%{name}
 BuildArch: noarch
 Requires: perl
+Requires: vm-builder
 
 %description
 This is a tool for provisioning new systems withing websys, and soon, within all of Systems Engineering
@@ -57,6 +58,9 @@ rm -rf %{buildroot}
 %config(noreplace) /etc/provision.conf
 
 %changelog
+* Wed Dec 19 2007 Jeff Schroeder <jeffschroeder@computer.org> provision-3.6.0-2
+- Fix vm.pm and add dependency on the newly open sourced vm-builder
+
 * Mon Aug 01 2007 Phil Dibowitz <phil@ticketmaster.com> provision-3.6.0-1
 - Core: Replace network_overlays with overlay_map
 - Core: Add support for configurable hostname parsing

@@ -34,7 +34,7 @@ use provision::util qw(:default :plugin);
 
 our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
-use constant DEFAULT_NEW_SERVER => '/vrt/shared/bin/new_server';
+use constant DEFAULT_NEW_SERVER => '/usr/bin/vm-builder';
 use constant NOHUP => '/usr/bin/nohup';
 use constant VMCMD => '/usr/bin/vmware-cmd';
 use constant RM => '/bin/rm';
