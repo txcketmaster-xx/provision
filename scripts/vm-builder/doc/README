@@ -1,0 +1,55 @@
+
+vm-builder - A tool to automate virtual machine creation and setup.
+
+Written by: Jeff Schroeder <jeffschroeder@computer.org>
+(C) 2007 Ticketmaster, Inc.
+
+Introduction
+------------
+
+This was originally created as a tool to scratch an itch. Creating new
+virtual machines using VMWare Server is a manual process. Instead of using
+vmware-server-console, why not write a script that does the same thing?
+
+
+Installation
+------------
+
+1. Install vm-builder using the included rpm or a stable snapshot.
+
+2. Run /usr/libexec/vm-builder/setup-vm-builder.sh. It will download
+i386 and 64 bit CentOS images and set everything up for vm-builder to
+work. The only thing it requires is a working ks.cfg on a server somewhere.
+
+3. Use vmware-server-console to create linux disk images. Name the image
+linux.vmdk and copy them to /home/vm-builder/template/linux/. An example
+would be linux-s001.vmdk, linux-s002.vmdk, linux-s003.vmdk, and linux.vmdk.
+
+3. Run vm-builder! The setup script gives you an example. Running it by
+itsself will show you the images available for it to use. It will mount
+the iso as a vmware drive, turn on the virtual machine, and start the
+kickstart. After it is done, you should have a fresh install. Make sure
+to have the 'rootpw' line in your ks.cfg so you can login as root.
+
+
+Feedback
+--------
+
+vm-builder is part of the 'provision' project located at
+http://sysprovision.googlecode.com/ . It can be discussed on the provision
+google group (http://groups.google.com/group/sysprovision).
+
+
+Getting The Source
+------------------
+
+Sources are available from googlecode in the Provision svn repository:
+http://sysprovision.googlecode.com/svn/trunk/scripts/vm-builder
+
+$ svn checkout http://sysprovision.googlecode.com/svn/trunk/scripts/vm-builder vm-builder
+
+
+License
+-------
+
+vm-builder is released under GPLv3.

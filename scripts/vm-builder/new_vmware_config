@@ -1,0 +1,109 @@
+#!/bin/bash
+
+##############################################################################
+# Usage: new_vmware_config -h [HOSTNAME] -d [DISTRO] -m [MEMORY]             #
+#                                                                            #
+# This is a rewrite of make_vm_config from perl to shell. Using perl         #
+# to do shell oriented kinds of things and really *basic* text manipulation  #
+# is overkill. This seems like the right tool for the job. -Jeff Schroeder   #
+#                                                                            #
+##############################################################################
+
+# -*- mode: sh; -*-
+# vim:textwidth=78:
+
+# $Id$
+
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Written by: Jeff Schroeder
+# (C) Copyright Ticketmaster, Inc. 2007
+#
+
+
+CONF='/etc/vm-builder/vmware-gsx.conf'
+FUNCTIONS='/usr/lib/vm-builder/vm-functions'
+
+# These are critical so bail out if they don't load
+if [ -f "$CONF" -a -f "$FUNCTIONS" ]; then
+	. $CONF
+	. $FUNCTIONS
+else
+	echo "ERROR: Could not load required include files!" >&2
+	exit 1
+fi
+
+DESCRIPTION='Create a new VMWare machine configuration.
+This works with Linux and Windows servers.'
+
+# Parsing and testing arvg all smart like
+parse_argv $*
+
+ISO="${IMAGEDIR}/${DISTRO}.iso"
+NEWCONFIG="${NEWSERVER}/${SERVER}.vmx"
+
+case $DISTRO in
+	*win2k3*)
+		TEMPLATE_DIR="$TEMPLATES/win2k3"
+	;;
+	*)
+		TEMPLATE_DIR="$TEMPLATES/linux"
+	;;
+esac
+
+[ -d $TEMPLATE_DIR ] || error "Template dir: $TEMPLATE_DIR is invalid"
+[ -d '/etc/vmware' ] || error "/etc/vmware does not exist"
+
+TEMPLATE="$TEMPLATE_DIR/template.vmx"
+
+# A few checks to prevent harmless VMControl errors on windows vms
+if (grep -qs 'floppy0.present = "FALSE"' $TEMPLATE); then
+	export FLOPPY="false"
+fi
+if (grep -qs 'ide1:0.present = "FALSE"' $TEMPLATE); then
+	export IDE_CONNECT="false"
+fi
+
+# Ah shell... how I love thee. Where else could nifty tricks be so simple?
+[ -f "$ISO" ] || error "Boot image $ISO is not a file"
+
+[ -f "$TEMPLATE" ] || error "Missing template.vmx"
+
+if [ -d "$NEWSERVER" ]; then
+	error "Configuration file for $NEWSERVER already exists"
+else
+	mkdir -p $NEWSERVER
+fi
+
+cd "$TEMPLATE_DIR" || error "Cant change into $TEMPLATE_DIR"
+
+# If there aren't any vmware disk images, chances are the vm won't boot
+[ "$(ls *.vmdk >/dev/null 2>&1; echo $?)" -eq 0 ] \
+	|| error "No VMWare *.vmdk disk files in $(pwd)"
+
+
+# Copy disk images over to the new directory
+for file in *.vmdk; do
+	cp $file "$NEWSERVER"
+done
+
+# The previous version of this script was perl just to do this sed-foo
+sed -e "s#%%NAME%%#$SERVER#g"		\
+	-e "s#%%MEM%%#$MEM#g"		\
+	-e "s#%%ISO_IMAGE%%#$ISO#g"	\
+	< $TEMPLATE > $NEWCONFIG	|| error "Creating $NEWCONFIG failed"
+
+# Chown / chmod everything over in one big go
+/bin/chown -R vmware:vmware $NEWSERVER
+/bin/chmod -R 755 $NEWSERVER

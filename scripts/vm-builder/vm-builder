@@ -1,0 +1,119 @@
+#!/bin/bash
+
+##############################################################################
+# Usage: vm-builder -h [HOSTNAME] -d [DISTRO] -m [MEMORY]                    #
+#                                                                            #
+# Creating virtual machines through the gui is slow and tedious. This script #
+# automates creating Linux or windows virtual machines from templates.       #
+#                                                                            #
+# [DISTRO] and [MEMORY] are optional and defaults are set in vmware-gsx.conf #
+#                                                                            #
+##############################################################################
+
+# -*- mode: sh; -*-
+# vim:textwidth=78:
+
+# $Id$
+
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Written by: Jeff Schroeder
+# (C) Copyright Ticketmaster, Inc. 2007
+#
+
+CONF='/etc/vm-builder/vmware-gsx.conf'
+FUNCTIONS='/usr/lib/vm-builder/vm-functions'
+
+# These are critical so bail out if they don't load
+if [ -f "$CONF" -a -f "$FUNCTIONS" ]; then
+	. $CONF
+	. $FUNCTIONS
+else
+	echo "ERROR: Could not load required include files!" >&2
+	exit 1
+fi
+
+DESCRIPTION="Provision a new VMWare virtual machine.
+This works with Linux and Windows servers."
+
+# Parsing and testing arvg all smart like
+parse_argv $*
+
+# -s will download and prep the images for usage
+if [ $SETUP -eq 1 ]; then
+	/usr/libexec/vm-builder/setup-vm-builder.sh
+	exit 0
+fi
+
+# A few sanity checks to keep from doing something stupid
+[ ! -z "$DISTROS" ] || error "No boot images available. Try vm-builder -s"
+
+[ -d "${VMDIR}/$SERVER/" ] \
+	&& error "${VMDIR}/$SERVER/ exists so not doing anything"
+
+[ -x $VMWARE_CMD ] || error "$VMWARE_CMD is not executable"
+
+[ -f "$($VMWARE_CMD -l 2>/dev/null| grep -q "$SERVER")" ] \
+	&& error "$SERVER is already a registered virtual machine. Skipping"
+
+[ -f "/etc/vmware/not_configured" ] \
+		&& error "VMWare is not configured. Run vmware-config.pl"
+
+[ -d '/etc/vmware' -a "$(id -u vmware >/dev/null 2>&1; echo $?)" -eq 0 ] || \
+		error "Please setup VMWare GSX Server"
+
+# Not everyone has fping installed by default
+if [ -x "`which fping 2>/dev/null`" ]; then
+	if (fping -q $SERVER); then
+		error "$SERVER is alive and pingable! Croaking"
+	fi
+elif [ -x "`which ping 2>/dev/null`" ]; then
+	if (ping -W 2 -c2 -q $SERVER >/dev/null 2>&1); then
+		error "$SERVER is alive and pingable! Goodbye"
+	fi
+fi
+
+echo "Creating $SERVER as $DISTRO with ${MEM}MB of ram"
+
+if (! ${BINDIR}/new_vmware_config -h $SERVER -d $DISTRO -m $MEM); then
+	error "Could not create config for $SERVER, no cookie for you" "noexit"
+	nuke_it "$NEWSERVER"
+fi
+
+
+
+if (! su - vmware -c "${VMWARE_CMD} -s register ${VMDIR}/${SERVER}/${SERVER}.vmx >/dev/null"); then
+	error "Could not register $SERVER, sorry" "noexit"
+	nuke_it "$NEWSERVER"
+fi
+
+if (! su - vmware -c "${VMWARE_CMD} ${VMDIR}/${SERVER}/${SERVER}.vmx start hard >/dev/null"); then
+	error "Could not start $SERVER" "noexit"
+	nuke_it "$NEWSERVER"
+fi
+
+if [ "$IDE_CONNECT" != "false" ]; then
+	sleep 1
+	su - vmware -c "${VMWARE_CMD} ${VMDIR}/${SERVER}/${SERVER}.vmx connectdevice ide1:0 >/dev/null"
+fi
+
+if [ "$FLOPPY" != "false" ]; then
+	echo "Sleeping 2 minutes and then removing floppy disk device..."
+	sleep 120
+
+	# Crude way to remove the virtual floppy before the machine reboots
+	su - vmware -c "${VMWARE_CMD} ${VMDIR}/${SERVER}/${SERVER}.vmx disconnectdevice ide1:0 >/dev/null 2>/dev/null"
+fi
+
+echo "$SERVER should be booting, use vmware-server-console to view it's status"

@@ -1,0 +1,41 @@
+#!/usr/bin/vmware
+#$Id$
+#
+
+config.version = "7"
+virtualHW.version = "3"
+
+scsi0.present = "TRUE"
+scsi0:0.present = "FALSE"
+scsi0:0.fileName = "windows.vmdk"
+
+ide1:0.present = "FALSE"
+ide1:0.fileName = "/dev/hdd"
+ide1:0.deviceType = "atapi-cdrom"
+ide0:0.present = "TRUE"
+ide0:0.fileName = "windows-0.vmdk"
+ide1:0.startConnected = "FALSE"
+ide1:0.clientDevice = "TRUE"
+
+floppy0.present = "FALSE"
+floppy0.startConnected = "FALSE"
+floppy0.fileName = "/dev/fd0"
+
+Ethernet0.present = "TRUE"
+usb.present = "FALSE"
+mouse.hostType = "imps2"
+mouse.fileName = "/dev/input/mice"
+
+displayName = "%%NAME%%"
+machine.id = "%%NAME%%"
+memsize = "%%MEM%%"
+tools.syncTime = "TRUE"
+
+guestOS = "winNetStandard"
+autostart = "poweron"
+priority.grabbed = "normal"
+priority.ungrabbed = "normal"
+powerType.powerOff = "default"
+powerType.powerOn = "default"
+powerType.suspend = "default"
+powerType.reset = "default"

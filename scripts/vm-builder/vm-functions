@@ -1,0 +1,98 @@
+#!/bin/bash
+
+#############################################################################
+#                                                                           #
+# vm-functions: Shared functions for vm-builder. Duplication is bad mm'kay? #
+#                                                                           #
+#############################################################################
+
+# -*- mode: sh; -*-
+# vim:textwidth=78:
+
+# $Id$
+
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+# Written by: Jeff Schroeder
+# (C) Copyright Ticketmaster, Inc. 2007
+#
+
+
+function usage() {
+	if [ -z "$DISTROS" ]; then
+		DISTROS='NONE! Try "vm-builder -s"'
+	fi
+
+cat << EOF >&2
+Usage: $0: -h [HOSTNAME] [OPTIONS]
+           -d [DISTRO]
+           -m [MEMORY]
+           -s Download and setup the boot images
+
+Available distros: $DISTROS
+
+$DESCRIPTION
+
+Defaults: $DISTRO_VERSION and ${MEM}MB of memory
+[DISTRO] and [MEMORY] optional.
+EOF
+	exit 1
+}
+
+function error() {
+	echo >&2
+	echo -e "ERROR: $1" '\b!' >&2
+	echo >&2
+
+	# Sometimes we want to cleanup before exiting
+	if [ "$2" != "noexit" ]; then
+		exit 1
+	fi
+}
+
+function nuke_it() {
+	[ "$1" ] || return 1
+
+	# Protect the user from stupidity if they mess up thier config file
+	if [ ! -z $1 -a $1 != '/' -a $1 != '/var' -a $1 != '/usr' -a $1 != '/home' ]
+	then
+		echo rm -rfv "$1" >&2
+		exit 1
+	fi
+}
+
+function parse_argv() {
+	SETUP=0
+
+	while getopts ':h:d:m:s' opt; do
+		case $opt in
+			h ) SERVER="$OPTARG"	;;
+			d ) DISTRO="$OPTARG"	;;
+			m ) MEM="$OPTARG"	;;
+			s ) SETUP=1; return 0	;;
+			* ) usage		;;
+	  	esac
+	done
+
+	# Actually test if you have the arguments after trying to set them
+	[ -z "$SERVER" ] && usage
+
+	# Make sure something like 512M or 512m wasn't passed
+	[ -z "$(echo $MEM | tr -d '[0-9]')" ] || usage
+
+	# Set to the default from vm-vmware.conf if no distro specified via -d
+	[ -z "$DISTRO" ] && DISTRO="$DISTRO_VERSION"
+
+	NEWSERVER="${VMDIR}/${SERVER}"
+}

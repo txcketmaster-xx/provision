@@ -1,0 +1,48 @@
+#!/usr/bin/vmware
+#$Id$
+
+config.version = "8"
+virtualHW.version = "4"
+
+memsize = "%%MEM%%"
+
+scsi0.present = "TRUE"
+# lsilogic is required to boot RHEL/CentOS 4.x and newer
+# it is backwards compatible with RHEL3
+scsi0.virtualDev = "lsilogic"
+scsi0:0.present = "TRUE"
+scsi0:0.fileName = "linux.vmdk"
+scsi0:0.writeThrough = "TRUE"
+scsi0:0.redo = ""
+
+ide1:0.present = "TRUE"
+ide1:0.fileName = "%%ISO_IMAGE%%"
+ide1:0.deviceType = "cdrom-image"
+ide1:0.startConnected = "FALSE"
+
+floppy0.fileName = "/dev/fd0"
+Ethernet0.present = "TRUE"
+usb.present = "FALSE"
+
+displayName = "%%NAME%%"
+machine.id = "%%NAME%%"
+
+guestOS = "redhat"
+autostart = "poweron"
+
+priority.grabbed = "normal"
+priority.ungrabbed = "normal"
+powerType.powerOff = "soft"
+powerType.powerOn = "hard"
+powerType.suspend = "hard"
+powerType.reset = "soft"
+
+floppy0.startConnected = "FALSE"
+floppy0.fileType = "file"
+
+Ethernet0.addressType = "generated"
+# Auto create bios info
+uuid.action = "create"
+
+# Sync with the host OS every minute
+tools.syncTime = "TRUE"

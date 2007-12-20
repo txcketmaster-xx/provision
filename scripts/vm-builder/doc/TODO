@@ -1,0 +1,15 @@
+TODO as of Dec 18, 2007
+
+	- Dig my head back into nroff and write a proper man page.
+
+	- Write a cheesy Makefile to install it for those on the bleeding edge
+
+	- Move these scripts to use libvirt's command line tools. This allows us
+	  transparent support of Xen, Qemu, and KVM. (http://www.libvirt.org).
+	  Backwards compatibility will stay in for VMWare GSX. This is a longterm
+	  goal that won't happen anytime in the near future..
+
+	- Better error checking of the disk images and gracefully recover from
+	  failures when they were built incorrectly.
+
+-Jeff Schroeder
