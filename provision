@@ -36,7 +36,7 @@ use provision::data;
 use provision::util qw(:default :provision);
 use Data::Dumper;
 
-our $VERSION = '3.6.0';
+our $VERSION = '3.6.1';
 
 #
 # A note on the locking variables - we try twice to get a lock
