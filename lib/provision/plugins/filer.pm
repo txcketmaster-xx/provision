@@ -32,7 +32,7 @@ use lib '/usr/lib';
 use provision::util qw(:default :plugin);
 use provision::data;
 
-our $RSH = '/usr/bin/ssh';
+our $RSH = '/usr/bin/ssh -ax';
 our $RM = '/bin/rm';
 our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
