@@ -32,7 +32,7 @@ use lib '/usr/lib';
 use provision::util qw(:default :plugin);
 use provision::data;
 
-our $RSH = '/usr/bin/rsh';
+our $RSH = '/usr/bin/ssh';
 our $RM = '/bin/rm';
 our $VERSION = sprintf('%d',q$Revision$ =~ /: ([\d\.]+)/);
 
@@ -601,7 +601,7 @@ sub are_quotas_on
 	my $self = shift;
 	my ($fls, $vol) = @_;
 
-        my $cmd = "$RSH $fls \"quota\" 2>&1";
+        my $cmd = "$RSH $fls \"quota status\" 2>&1";
 	my $state = '';
 
 	my $output = `$cmd`;
