@@ -58,7 +58,7 @@ rm -rf %{buildroot}
 %{doc_prefix}/*
 
 %changelog
-* Wed Dec 19 2007 Phil Dibowitz <phil@ticketmaster.com> provision-3.6.1-1
+* Tue Jan 15 2008 Phil Dibowitz <phil@ticketmaster.com> provision-3.6.1-1
 - Fix vm.pm for vm-builder (jeffschroeder@computer.org)
 - Update spec file to not install unnecessary files in /usr/lib and to include docs
 - Update spec to remove TM-specific stuff
