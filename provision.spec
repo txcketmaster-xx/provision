@@ -1,46 +1,45 @@
-%define tm_srcpath	/bld/shared/source/provision
-%define tm_devtag	provision_3_6_0
-%define tm_modules	syseng/provision
-%define tm_skiptag	0
-
-%define TM_Component	provision
 %define app_prefix	/usr
 
-Name: %{TM_Component}
+Name: provision
 Summary: A tool for provisioning new systems
-Packager: Phil Dibowitz, <phil.dibowitz@ticketmaster.com>
-Version: 3.6.0
-Release: 2
-Source: %{TM_Component}-%{version}-cvs.tar.gz
-Copyright: GPL
+Packager: Phil Dibowitz <phil.dibowitz@ticketmaster.com>
+Version: 3.6.1
+Release: 1
+Source: %{name}-%{version}.tar.gz
+License: GPL
 Group: Applications/System
 BuildRoot: %{_tmppath}/%{name}
 BuildArch: noarch
 Requires: perl
-Requires: vm-builder
 
 %description
 This is a tool for provisioning new systems withing websys, and soon, within all of Systems Engineering
 
 %prep
 rm -rf %{buildroot}
-%setup -q -n syseng/%{name}
+%setup -q -n %{name}-%{version}
 
 #%build
 
 %install
+%define doc_prefix      /%{app_prefix}/share/doc/%{name}-%{version}
+
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT
 %{__mkdir_p} $RPM_BUILD_ROOT/etc
 %{__mkdir_p} $RPM_BUILD_ROOT%{app_prefix}/{lib,bin,libexec}
 %{__mkdir_p} $RPM_BUILD_ROOT%{app_prefix}/lib/provision/{plugins,local_decision}
+%{__mkdir_p} $RPM_BUILD_ROOT%{doc_prefix}
 %{__chmod} 0755 $RPM_BUILD_ROOT%{app_prefix}/libexec
 
 %{__install} -p -m 0755 provision $RPM_BUILD_ROOT%{app_prefix}/bin/provision
 %{__install} -p -m 0755 provision_helper $RPM_BUILD_ROOT%{app_prefix}/libexec/provision_helper
 %{__install} -p -m 0755 lib/provision/*.pm $RPM_BUILD_ROOT%{app_prefix}/lib/provision/
 %{__install} -p -m 0755 lib/provision/plugins/*.pm $RPM_BUILD_ROOT%{app_prefix}/lib/provision/plugins
-%{__install} -p -m 0755 lib/provision/local_decision/*.pm $RPM_BUILD_ROOT%{app_prefix}/lib/provision/local_decision
+%{__install} -p -m 0755 lib/provision/local_decision/generic.pm $RPM_BUILD_ROOT%{app_prefix}/lib/provision/local_decision
 %{__install} -p -m 0755 conf/provision.conf.dist $RPM_BUILD_ROOT/etc/provision.conf
+%{__install} -p -m 0755 lib/provision/local_decision/template.pm $RPM_BUILD_ROOT%{doc_prefix}
+%{__install} -p -m 0755 LICENSE $RPM_BUILD_ROOT%{doc_prefix}
+%{__install} -p -m 0755 docs/* $RPM_BUILD_ROOT%{doc_prefix}
 
 %clean
 rm -rf %{buildroot}
@@ -56,10 +55,14 @@ rm -rf %{buildroot}
 %{app_prefix}/lib/provision/*
 %{app_prefix}/libexec/provision_helper
 %config(noreplace) /etc/provision.conf
+%{doc_prefix}/*
 
 %changelog
-* Wed Dec 19 2007 Jeff Schroeder <jeffschroeder@computer.org> provision-3.6.0-2
-- Fix vm.pm and add dependency on the newly open sourced vm-builder
+* Wed Dec 19 2007 Phil Dibowitz <phil@ticketmaster.com> provision-3.6.1-1
+- Fix vm.pm for vm-builder (jeffrey.schroeder@ticketmaster.com)
+- Update spec file to not install unnecessary files in /usr/lib and to include docs
+- Update spec to remove TM-specific stuff
+- Version bump to differentiate from the version 3.6.0 this code is all based on
 
 * Mon Aug 01 2007 Phil Dibowitz <phil@ticketmaster.com> provision-3.6.0-1
 - Core: Replace network_overlays with overlay_map
