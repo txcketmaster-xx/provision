@@ -868,7 +868,7 @@ sub get_dst_host
 	my $self = shift;
 	my ($host,$config,$ld) = @_;;
 
-	return $config->{'dns_host'};
+	return $config->{'dns_master'};
 }
 
 sub remove_name_from_fwd

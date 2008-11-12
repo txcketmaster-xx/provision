@@ -36,7 +36,7 @@ use lib '/usr/lib';
 use provision::util qw(:default);
 
 use constant DEFAULT_LIBEXEC => '/usr/libexec';
-use constant DEFAULT_DNS_HOST => 'dns1.sys.adm2.websys.tmcs';
+use constant DEFAULT_DNS_HOST => 'ns1'
 use constant DEFAULT_ZONE_PATH => '/chroot/named/var/named/pz';
 use constant DEFAULT_START_IP => 10;
 use constant DEFAULT_END_IP => 240;
@@ -163,7 +163,7 @@ sub _get_defaults
 		'zonepath' => DEFAULT_ZONE_PATH,
 		'dns_start_search' => DEFAULT_START_IP,
 		'dns_end_search' => DEFAULT_END_IP,
-		'dns_host' => DEFAULT_DNS_HOST,
+		'dns_master' => DEFAULT_DNS_HOST,
 	};
 
 	return $config;
