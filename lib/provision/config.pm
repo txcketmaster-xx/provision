@@ -36,7 +36,7 @@ use lib '/usr/lib';
 use provision::util qw(:default);
 
 use constant DEFAULT_LIBEXEC => '/usr/libexec';
-use constant DEFAULT_DNS_HOST => 'ns1'
+use constant DEFAULT_DNS_HOST => 'ns1';
 use constant DEFAULT_ZONE_PATH => '/chroot/named/var/named/pz';
 use constant DEFAULT_START_IP => 10;
 use constant DEFAULT_END_IP => 240;
